@@ -1,0 +1,65 @@
+{{- define "page"}}
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+	<title>Template Documentation</title>
+	<style>
+		pre.index {
+			margin: 0;
+		}
+		.define-template pre {
+				overflow-x: scroll;
+				max-width: 90vw;
+				background-color: beige;
+				padding: 1em;
+		}
+	</style>
+</head>
+<body>
+<h1>Template Documentation</h1>
+{{template "index" .}}
+<div>
+	<h2>Templates</h2>
+	<div>
+    {{range .Templates}}
+			{{template "define_template" .}}
+    {{end}}
+	</div>
+</div>
+</body>
+</html>
+{{end -}}
+
+{{- define "index" -}}
+	<div id="index">
+		<h2>Index</h2>
+		<div>
+			<h3>Templates</h3>
+			<ul>
+        {{range .TemplateLinks}}
+          <li><a href="#{{.SafeID}}"><pre class="index">{{.Name}}</pre></a></li>
+        {{end}}
+			</ul>
+		</div>
+		<div>
+			<h3>Functions</h3>
+			<ul>
+        {{range .FunctionLinks}}
+					<li><pre class="index">{{.Name}}</pre></li>
+        {{end}}
+			</ul>
+		</div>
+	</div>
+{{- end -}}
+
+
+{{- define "define_template" -}}
+	<div class="define-template" id="{{.ID}}">
+		<h2>{{.Template.Name}}</h2>
+<pre>{{.Definition}}</pre>
+	</div>
+{{- end -}}
+
+{{- define "template_link" -}}
+		<a href="#{{.Link}}">{{.Source}}</a>
+{{- end -}}
