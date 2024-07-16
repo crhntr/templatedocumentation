@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="us-en">
+<head>
+		<meta charset="UTF-8">
+		<title>Website</title>
+</head>
+<body>
+	{{template "header" "" }}
+
+	{{range $post := .Posts -}}
+		{{template "article" $post}}
+	{{- end}}
+
+	{{template "footer" "" }}
+</body>
+</html>
+
+{{- define "header" -}}
+<header>
+	<h1><a href="/">Blog</a></h1>
+  {{template "nav" "" }}
+</header>
+{{- end -}}
+
+{{- define "nav" -}}
+	<nav>
+		<ul>
+			<li><a href="https://crhntr.com">Personal Website</a></li>
+			<li><a href="https://www.linkedin.com/in/crhntr">LinkedIn</a></li>
+			<li><a href="https://github.com/crhntr">GitHub</a></li>
+		</ul>
+	</nav>
+{{- end -}}
+
+{{- define "footer" -}}
+<footer>
+	{{template "nav" "" }}
+	<p>&copy; {{now | .Year}}</p>
+</footer>
+{{- end -}}
+
+{{- define "article" -}}
+<article id="#{{.ArticleFragment}}">
+	<h2>{{.Title}}</h2>
+	<div>{{.Content | markdown}}</div>
+</article>
+{{- end -}}
+
+{{define "empty" -}}{{- end}}
