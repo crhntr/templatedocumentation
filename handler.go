@@ -32,15 +32,15 @@ type server struct {
 	functions template.FuncMap
 }
 
-func (srv *server) TemplateLinks() []Link {
-	var links []Link
+func (srv *server) TemplateLinks() []link {
+	var links []link
 	for _, ts := range srv.templates.Templates() {
 		if isEmptyTemplate(ts) {
 			continue
 		}
 		links = append(links, newTemplateLink(ts))
 	}
-	slices.SortFunc(links, func(a, b Link) int {
+	slices.SortFunc(links, func(a, b link) int {
 		return cmp.Compare(a.Name, b.Name)
 	})
 	return slices.Clip(links)
@@ -68,40 +68,40 @@ func render(res http.ResponseWriter, _ *http.Request, code int, name string, dat
 	_, _ = buf.WriteTo(res)
 }
 
-func (srv *server) FunctionLinks() []Link {
-	var links []Link
+func (srv *server) FunctionLinks() []link {
+	var links []link
 	for name, function := range srv.functions {
 		if name == "" {
 			continue
 		}
 		links = append(links, newFunctionLink(name, function))
 	}
-	slices.SortFunc(links, func(a, b Link) int {
+	slices.SortFunc(links, func(a, b link) int {
 		return cmp.Compare(a.Name, b.Name)
 	})
 	return slices.Clip(links)
 }
 
-func (srv *server) Templates() []Template {
-	var result []Template
+func (srv *server) Templates() []definition {
+	var result []definition
 	for _, ts := range srv.templates.Templates() {
 		if isEmptyTemplate(ts) {
 			continue
 		}
-		result = append(result, Template{Template: ts, functions: srv.functions})
+		result = append(result, definition{Template: ts, functions: srv.functions})
 	}
 	return result
 
 }
 
-type Link struct {
+type link struct {
 	Name      string
 	SafeID    string
 	Signature string
 }
 
-func newLink(prefix, name string) Link {
-	return Link{
+func newLink(prefix, name string) link {
+	return link{
 		Name:   name,
 		SafeID: templateID(name),
 	}
@@ -111,7 +111,7 @@ func templateID(name string) string {
 	return "template--" + url.QueryEscape(name)
 }
 
-func newFunctionLink(name string, anyFunction any) Link {
+func newFunctionLink(name string, anyFunction any) link {
 	link := newLink("function--", name)
 
 	function := reflect.ValueOf(anyFunction)
@@ -122,33 +122,33 @@ func newFunctionLink(name string, anyFunction any) Link {
 	return link
 }
 
-func newTemplateLink(template *template.Template) Link {
+func newTemplateLink(template *template.Template) link {
 	link := newLink("function--", template.Name())
 	link.Name = "{{template " + strconv.Quote(link.Name) + " . }}"
 	return link
 }
 
-type Template struct {
+type definition struct {
 	*template.Template
 	functions template.FuncMap
 }
 
-func (ts Template) ID() string {
+func (ts definition) ID() string {
 	return templateID(ts.Template.Name())
 }
 
-func (ts Template) Definition() template.HTML {
+func (ts definition) Definition() template.HTML {
 	if ts.Template == nil ||
 		ts.Template.Tree == nil ||
 		ts.Template.Tree.Root == nil {
 		return ""
 	}
-	definition := html.EscapeString(ts.Template.Tree.Root.String())
+	src := html.EscapeString(ts.Template.Tree.Root.String())
 
 	templateExp := regexp.MustCompile(`(?mU)\{\{template\s+&#34;(.+)&#34;\s+.*}}`)
 	matchExp := regexp.MustCompile(`(?mU)&#34;(.*)&#34;`)
 
-	replaced := templateExp.ReplaceAllStringFunc(definition, func(match string) string {
+	replaced := templateExp.ReplaceAllStringFunc(src, func(match string) string {
 		matches := matchExp.FindStringSubmatch(match)
 		if len(matches) <= 1 {
 			return match
