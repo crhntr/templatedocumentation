@@ -22,16 +22,15 @@ var (
 	templates = template.Must(template.New("documentation").Parse(templateGoHTML))
 )
 
-type TemplatesFunc func() (*template.Template, error)
+type TemplatesFunc func() (*template.Template, template.FuncMap, error)
 
-func Handler(templates TemplatesFunc, functions template.FuncMap) http.Handler {
-	srv := &server{templates: templates, functions: functions}
+func Handler(templates TemplatesFunc) http.Handler {
+	srv := &server{templates: templates}
 	return http.HandlerFunc(srv.page)
 }
 
 type server struct {
 	templates TemplatesFunc
-	functions template.FuncMap
 }
 
 func isEmptyTemplate(ts *template.Template) bool {
@@ -53,11 +52,11 @@ func render(res http.ResponseWriter, _ *http.Request, code int, name string, dat
 }
 
 func (srv *server) page(res http.ResponseWriter, req *http.Request) {
-	ts, err := srv.templates()
+	ts, fns, err := srv.templates()
 	render(res, req, http.StatusOK, "page", indexPage{
 		err:       err,
 		templates: ts,
-		functions: srv.functions,
+		functions: fns,
 	})
 }
 

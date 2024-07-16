@@ -23,9 +23,9 @@ func TestHandler(t *testing.T) {
 	}
 	ts := template.Must(template.New("testdata").Funcs(functions).ParseFiles(filepath.Join("testdata", "templates.gohtml")))
 
-	h := templatedocumentation.Handler(func() (*template.Template, error) {
-		return ts, nil
-	}, functions)
+	h := templatedocumentation.Handler(func() (*template.Template, template.FuncMap, error) {
+		return ts, functions, nil
+	})
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "/", nil)
