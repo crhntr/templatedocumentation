@@ -5,7 +5,12 @@
 		<title>Website</title>
 </head>
 <body>
-	{{template "header" "" }}
+	{{- block "header" . -}}
+		<header>
+			<h1><a href="/">Blog</a></h1>
+	      {{template "nav" "" }}
+		</header>
+	{{- end -}}
 
 	{{range $post := .Posts -}}
 		{{template "article" $post}}
@@ -14,13 +19,6 @@
 	{{template "footer" "" }}
 </body>
 </html>
-
-{{- define "header" -}}
-<header>
-	<h1><a href="/">Blog</a></h1>
-  {{template "nav" "" }}
-</header>
-{{- end -}}
 
 {{- define "nav" -}}
 	<nav>
