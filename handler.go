@@ -22,37 +22,21 @@ var (
 	templates = template.Must(template.New("documentation").Parse(templateGoHTML))
 )
 
-func Handler(templates *template.Template, functions template.FuncMap) http.Handler {
+type TemplatesFunc func() (*template.Template, error)
+
+func Handler(templates TemplatesFunc, functions template.FuncMap) http.Handler {
 	srv := &server{templates: templates, functions: functions}
 	return http.HandlerFunc(srv.page)
 }
 
 type server struct {
-	templates *template.Template
+	templates TemplatesFunc
 	functions template.FuncMap
-}
-
-func (srv *server) TemplateLinks() []link {
-	var links []link
-	for _, ts := range srv.templates.Templates() {
-		if isEmptyTemplate(ts) {
-			continue
-		}
-		links = append(links, newTemplateLink(ts))
-	}
-	slices.SortFunc(links, func(a, b link) int {
-		return cmp.Compare(a.Name, b.Name)
-	})
-	return slices.Clip(links)
 }
 
 func isEmptyTemplate(ts *template.Template) bool {
 	name := ts.Name()
 	return name == "" || ts.Tree == nil || ts.Tree.Root == nil || strings.TrimSpace(ts.Tree.Root.String()) == ""
-}
-
-func (srv *server) page(res http.ResponseWriter, req *http.Request) {
-	render(res, req, http.StatusOK, "page", srv)
 }
 
 func render(res http.ResponseWriter, _ *http.Request, code int, name string, data any) {
@@ -68,9 +52,38 @@ func render(res http.ResponseWriter, _ *http.Request, code int, name string, dat
 	_, _ = buf.WriteTo(res)
 }
 
-func (srv *server) FunctionLinks() []link {
+func (srv *server) page(res http.ResponseWriter, req *http.Request) {
+	ts, err := srv.templates()
+	render(res, req, http.StatusOK, "page", indexPage{
+		err:       err,
+		templates: ts,
+		functions: srv.functions,
+	})
+}
+
+type indexPage struct {
+	templates *template.Template
+	functions template.FuncMap
+	err       error
+}
+
+func (pg indexPage) TemplateLinks() []link {
 	var links []link
-	for name, function := range srv.functions {
+	for _, ts := range pg.templates.Templates() {
+		if isEmptyTemplate(ts) {
+			continue
+		}
+		links = append(links, newTemplateLink(ts))
+	}
+	slices.SortFunc(links, func(a, b link) int {
+		return cmp.Compare(a.Name, b.Name)
+	})
+	return slices.Clip(links)
+}
+
+func (pg indexPage) FunctionLinks() []link {
+	var links []link
+	for name, function := range pg.functions {
 		if name == "" {
 			continue
 		}
@@ -82,16 +95,15 @@ func (srv *server) FunctionLinks() []link {
 	return slices.Clip(links)
 }
 
-func (srv *server) Templates() []definition {
+func (pg indexPage) Templates() []definition {
 	var result []definition
-	for _, ts := range srv.templates.Templates() {
+	for _, ts := range pg.templates.Templates() {
 		if isEmptyTemplate(ts) {
 			continue
 		}
-		result = append(result, definition{Template: ts, functions: srv.functions})
+		result = append(result, definition{Template: ts, functions: pg.functions})
 	}
 	return result
-
 }
 
 type link struct {
