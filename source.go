@@ -59,19 +59,6 @@ func (data *sourceIndex) TemplateLinks() []link {
 	return links
 }
 
-func (data *sourceIndex) FunctionLinks() []link {
-	result := make(map[string][]parse.Node)
-	for _, tree := range data.set {
-		listFunctions(tree, result)
-	}
-	links := make([]link, 0, len(result))
-	for name := range result {
-		l := newLink(functionPrefix, name)
-		links = append(links, l)
-	}
-	return links
-}
-
 func (data *sourceIndex) Templates() []definition {
 	return definitionsFromTreeSet(data.set)
 }
@@ -92,20 +79,4 @@ func parseSource(set treeSet, filePath string) error {
 		return err
 	}
 	return nil
-}
-
-func listFunctions(node *parse.Tree, functions map[string][]parse.Node) {
-	for _, n := range node.Root.Nodes {
-		switch nd := n.(type) {
-		case *parse.ActionNode:
-			for _, cmd := range nd.Pipe.Cmds {
-				for _, id := range cmd.Args {
-					if id.Type() != parse.NodeIdentifier {
-						continue
-					}
-					functions[id.String()] = append(functions[id.String()], id)
-				}
-			}
-		}
-	}
 }

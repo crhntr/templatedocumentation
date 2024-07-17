@@ -7,7 +7,6 @@ import (
 	"html/template"
 	"net/http"
 	"net/url"
-	"reflect"
 	"slices"
 	"strconv"
 	"strings"
@@ -78,20 +77,6 @@ func (pg indexPage) TemplateLinks() []link {
 	return slices.Clip(links)
 }
 
-func (pg indexPage) FunctionLinks() []link {
-	var links []link
-	for name, function := range pg.functions {
-		if name == "" {
-			continue
-		}
-		links = append(links, newFunctionLink(name, function))
-	}
-	slices.SortFunc(links, func(a, b link) int {
-		return cmp.Compare(a.Name, b.Name)
-	})
-	return slices.Clip(links)
-}
-
 func (pg indexPage) Templates() []definition {
 	return definitionsFromTemplates(pg.templates.Templates())
 }
@@ -103,7 +88,6 @@ type link struct {
 }
 
 const (
-	functionPrefix = "function--"
 	templatePrefix = "template--"
 )
 
@@ -116,17 +100,6 @@ func newLink(prefix, name string) link {
 
 func identifier(prefix, name string) string {
 	return prefix + url.QueryEscape(name)
-}
-
-func newFunctionLink(name string, anyFunction any) link {
-	a := newLink(functionPrefix, name)
-
-	function := reflect.ValueOf(anyFunction)
-	fnType := strings.TrimPrefix(function.Type().String(), "func")
-	fnType = strings.Replace(fnType, "interface {}", "any", -1)
-
-	a.Name = "func " + a.Name + fnType
-	return a
 }
 
 func newTemplateLink(template *template.Template) link {
