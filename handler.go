@@ -13,6 +13,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"text/template/parse"
 )
 
 var (
@@ -33,9 +34,8 @@ type server struct {
 	templates TemplatesFunc
 }
 
-func isEmptyTemplate(ts *template.Template) bool {
-	name := ts.Name()
-	return name == "" || ts.Tree == nil || ts.Tree.Root == nil || strings.TrimSpace(ts.Tree.Root.String()) == ""
+func isEmptyTemplate(ts *parse.Tree) bool {
+	return ts == nil || ts.Name == "" || ts.Root == nil || strings.TrimSpace(ts.Root.String()) == ""
 }
 
 func render(res http.ResponseWriter, _ *http.Request, code int, name string, data any) {
@@ -69,7 +69,7 @@ type indexPage struct {
 func (pg indexPage) TemplateLinks() []link {
 	var links []link
 	for _, ts := range pg.templates.Templates() {
-		if isEmptyTemplate(ts) {
+		if ts == nil || isEmptyTemplate(ts.Tree) {
 			continue
 		}
 		links = append(links, newTemplateLink(ts))
@@ -97,10 +97,10 @@ func (pg indexPage) FunctionLinks() []link {
 func (pg indexPage) Templates() []definition {
 	var result []definition
 	for _, ts := range pg.templates.Templates() {
-		if isEmptyTemplate(ts) {
+		if ts == nil || isEmptyTemplate(ts.Tree) {
 			continue
 		}
-		result = append(result, definition{Template: ts, functions: pg.functions})
+		result = append(result, definition{Tree: ts.Tree})
 	}
 	return result
 }
@@ -111,50 +111,53 @@ type link struct {
 	Signature string
 }
 
+const (
+	functionPrefix = "function--"
+	templatePrefix = "template--"
+)
+
 func newLink(prefix, name string) link {
 	return link{
 		Name:   name,
-		SafeID: templateID(name),
+		SafeID: identifier(prefix, name),
 	}
 }
 
-func templateID(name string) string {
-	return "template--" + url.QueryEscape(name)
+func identifier(prefix, name string) string {
+	return prefix + url.QueryEscape(name)
 }
 
 func newFunctionLink(name string, anyFunction any) link {
-	link := newLink("function--", name)
+	a := newLink(functionPrefix, name)
 
 	function := reflect.ValueOf(anyFunction)
 	fnType := strings.TrimPrefix(function.Type().String(), "func")
 	fnType = strings.Replace(fnType, "interface {}", "any", -1)
 
-	link.Name = "func " + link.Name + fnType
-	return link
+	a.Name = "func " + a.Name + fnType
+	return a
 }
 
 func newTemplateLink(template *template.Template) link {
-	link := newLink("function--", template.Name())
-	link.Name = "{{template " + strconv.Quote(link.Name) + " . }}"
-	return link
+	a := newLink(templatePrefix, template.Name())
+	a.Name = "{{template " + strconv.Quote(a.Name) + " . }}"
+	return a
 }
 
 type definition struct {
-	*template.Template
-	functions template.FuncMap
+	*parse.Tree
 }
 
 func (ts definition) ID() string {
-	return templateID(ts.Template.Name())
+	return identifier(templatePrefix, ts.Tree.Name)
 }
 
 func (ts definition) Definition() template.HTML {
-	if ts.Template == nil ||
-		ts.Template.Tree == nil ||
-		ts.Template.Tree.Root == nil {
+	if ts.Tree == nil ||
+		ts.Tree.Root == nil {
 		return ""
 	}
-	src := html.EscapeString(ts.Template.Tree.Root.String())
+	src := html.EscapeString(ts.Tree.Root.String())
 
 	templateExp := regexp.MustCompile(`(?mU)\{\{template\s+&#34;(.+)&#34;\s+.*}}`)
 	matchExp := regexp.MustCompile(`(?mU)&#34;(.*)&#34;`)
@@ -170,7 +173,7 @@ func (ts definition) Definition() template.HTML {
 			Link   string
 			Source string
 		}{
-			Link:   templateID(name),
+			Link:   identifier(templatePrefix, name),
 			Source: html.UnescapeString(match),
 		}); err != nil {
 			return match

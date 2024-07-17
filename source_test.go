@@ -1,40 +1,25 @@
-package templatedocumentation_test
+package templatedocumentation
 
 import (
 	"fmt"
-	"html/template"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/crhntr/dom/domtest"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/crhntr/templatedocumentation"
 )
 
-func TestHandler(t *testing.T) {
-	functions := template.FuncMap{
-		"now":      time.Now,
-		"markdown": func(s string) template.HTML { return "" },
-	}
-	ts := template.Must(template.New("testdata").Funcs(functions).ParseFiles(filepath.FromSlash("testdata/templates.gohtml")))
-
-	h := templatedocumentation.Handler(func() (*template.Template, template.FuncMap, error) {
-		return ts, functions, nil
-	})
+func TestSourceHandler(t *testing.T) {
+	h := SourceHandler("testdata")
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "/", nil)
 	h.ServeHTTP(rec, req)
 
 	res := rec.Result()
-	if !assert.Equal(t, http.StatusOK, res.StatusCode) {
-		t.Log(rec.Body.String())
-	}
+	assert.Equal(t, http.StatusOK, res.StatusCode)
 
 	document := domtest.Response(t, res)
 
