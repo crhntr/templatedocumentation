@@ -34,22 +34,22 @@ func SourceHandler(directory string) http.Handler {
 }
 
 type sourceIndex struct {
-	templateSet map[string]*parse.Tree
+	set treeSet
 }
 
 func newSourceIndex(set treeSet) *sourceIndex {
 	return &sourceIndex{
-		templateSet: set,
+		set: set,
 	}
 }
 
 func (data *sourceIndex) TemplateLinks() []link {
-	links := make([]link, 0, len(data.templateSet))
-	for name, tree := range data.templateSet {
+	links := make([]link, 0, len(data.set))
+	for _, tree := range data.set {
 		if isEmptyTemplate(tree) {
 			continue
 		}
-		a := newLink(templatePrefix, name)
+		a := newLink(templatePrefix, tree.Name)
 		a.Name = "{{template " + strconv.Quote(a.Name) + " . }}"
 		links = append(links, a)
 	}
@@ -61,7 +61,7 @@ func (data *sourceIndex) TemplateLinks() []link {
 
 func (data *sourceIndex) FunctionLinks() []link {
 	result := make(map[string][]parse.Node)
-	for _, tree := range data.templateSet {
+	for _, tree := range data.set {
 		listFunctions(tree, result)
 	}
 	links := make([]link, 0, len(result))
@@ -73,19 +73,7 @@ func (data *sourceIndex) FunctionLinks() []link {
 }
 
 func (data *sourceIndex) Templates() []definition {
-	var definitions []definition
-	for _, tree := range data.templateSet {
-		if isEmptyTemplate(tree) {
-			continue
-		}
-		definitions = append(definitions, definition{
-			Tree: tree,
-		})
-	}
-	slices.SortFunc(definitions, func(a, b definition) int {
-		return cmp.Compare(a.Name, b.Name)
-	})
-	return definitions
+	return definitionsFromTreeSet(data.set)
 }
 
 type treeSet map[string]*parse.Tree
