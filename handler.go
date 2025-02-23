@@ -104,6 +104,6 @@ func identifier(prefix, name string) string {
 
 func newTemplateLink(template *template.Template) link {
 	a := newLink(templatePrefix, template.Name())
-	a.Name = "{{template " + strconv.Quote(a.Name) + " . }}"
+	a.Name = "{{ template " + strconv.Quote(a.Name) + " . }}"
 	return a
 }
